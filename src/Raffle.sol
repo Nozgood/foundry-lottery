@@ -7,6 +7,7 @@ pragma solidity 0.8.19;
 // 4. errors
 
 error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
+error Raffle__InsufficientInterval();
 
 // 5. interfaces
 
@@ -22,9 +23,13 @@ contract Raffle {
     // i_ for immutable
     uint256 private immutable i_entranceFee;
 
+    // @dev the duration of lottery in seconds
+    uint256 private immutable i_interval;
+
     // s_ for state variable
     // payable to allow addresses to receive ether
     address payable[] private s_players;
+    uint256 private s_lastTimestamp;
 
     event RaffleEntered(address indexed player);
 
@@ -40,8 +45,10 @@ contract Raffle {
         */
 
     // at the init of the contract, we set the entrance fee value to the received param;
-    constructor(uint256 entranceFee) {
+    constructor(uint256 entranceFee, uint256 interval) {
         i_entranceFee = entranceFee;
+        i_interval = interval;
+        s_lastTimestamp = block.timestamp;
     }
 
     function getEntranceFee() external view returns (uint256) {
@@ -49,7 +56,7 @@ contract Raffle {
     }
 
     // enterRaffle => a user participate to the raffle, pay the fee etc ...
-    function enterRaffle() public payable {
+    function enterRaffle() external payable {
         if (msg.value < i_entranceFee) {
             revert Raffle__InsufficientEntranceFee(msg.value, i_entranceFee);
         }
@@ -59,5 +66,13 @@ contract Raffle {
     }
 
     // pickWinner => we select the winner of the raffle
-    function pickWinner() public {}
+    function pickWinner() external {
+        if ((block.timestamp - s_lastTimestamp) > i_interval) {
+            revert Raffle__InsufficientInterval();
+        }
+
+        // pick a random number
+        // get the address index corresponding to this number
+        // pay the address with all the funded ETH
+    }
 }
