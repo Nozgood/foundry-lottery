@@ -4,7 +4,8 @@ pragma solidity 0.8.19;
 
 // 2. import statements
 
-// TODO: import Chainlink VRF contract
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 // 4. errors
 
@@ -23,7 +24,7 @@ error Raffle__InsufficientInterval();
 /// @author nowdev
 /// @notice This contract has a learning purpose, it does not aims to be used in production
 /// @dev
-contract Raffle {
+contract Raffle is VRFConsumerBaseV2Plus {
     // i_ for immutable
     uint256 private immutable i_entranceFee;
 
@@ -34,6 +35,9 @@ contract Raffle {
     // payable to allow addresses to receive ether
     address payable[] private s_players;
     uint256 private s_lastTimestamp;
+
+    // 34454315038717409854187127711103819628859866229620648994410326661620188613650
+    uint256 private s_subscriptionId;
 
     event RaffleEntered(address indexed player);
 
@@ -49,10 +53,22 @@ contract Raffle {
         */
 
     // at the init of the contract, we set the entrance fee value to the received param;
-    constructor(uint256 entranceFee, uint256 interval) {
+
+    // NOTE: i have to use the constructor of the contract i inherits from
+
+    // WARN: the address of the Coordinator is hardcoded for SEPOLIA
+    // 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B
+
+    constructor(
+        uint256 entranceFee,
+        uint256 interval,
+        uint256 subscriptionId,
+        address vrfCoordinator
+    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_lastTimestamp = block.timestamp;
+        s_subscriptionId = subscriptionId;
     }
 
     function getEntranceFee() external view returns (uint256) {
@@ -75,7 +91,28 @@ contract Raffle {
             revert Raffle__InsufficientInterval();
         }
 
+        // requestId = s_vrfCoordinator.requestRandomWords(
+        //     VRFV2PlusClient.RandomWordsRequest({
+        //         keyHash: keyHash,
+        //         subId: s_subscriptionId,
+        //         requestConfirmations: requestConfirmations,
+        //         callbackGasLimit: callbackGasLimit,
+        //         numWords: numWords,
+        //         extraArgs: VRFV2PlusClient._argsToBytes(
+        //             VRFV2PlusClient.ExtraArgsV1({
+        //                 nativePayment: enableNativePayment
+        //             })
+        //         )
+        //     })
+        // );
+
         // TODO: request the number
-        // TODO get the number
+        // TODO: get the number
     }
+
+    // implementation of fullfillRandomWords function
+    function fulfillRandomWords(
+        uint256 requestId,
+        uint256[] calldata randomWords
+    ) internal override {}
 }
