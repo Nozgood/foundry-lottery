@@ -25,18 +25,27 @@ error Raffle__InsufficientInterval();
 /// @notice This contract has a learning purpose, it does not aims to be used in production
 /// @dev
 contract Raffle is VRFConsumerBaseV2Plus {
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint16 private constant NUMBER_OF_WORDS = 1;
+
     // i_ for immutable
     uint256 private immutable i_entranceFee;
 
     // @dev the duration of lottery in seconds
     uint256 private immutable i_interval;
+    // from chainlink doc for ETH sepolia (2 gwei key hash): 0x9e9e46732b32662b9adc6f3abdf6c5e926a666d174a4d6b8e39c4cca76a38897
+    bytes32 private immutable i_keyHash;
+
+    // subId of my own subscription (metamask): 34454315038717409854187127711103819628859866229620648994410326661620188613650
+    uint256 private immutable i_subscriptionId;
+
+    uint32 private immutable i_callbackGasLimit;
 
     // s_ for state variable
     // payable to allow addresses to receive ether
     address payable[] private s_players;
     uint256 private s_lastTimestamp;
 
-    // 34454315038717409854187127711103819628859866229620648994410326661620188613650
     uint256 private s_subscriptionId;
 
     event RaffleEntered(address indexed player);
@@ -63,12 +72,16 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 entranceFee,
         uint256 interval,
         uint256 subscriptionId,
-        address vrfCoordinator
+        address vrfCoordinator,
+        bytes32 keyHash,
+        uint32 callbackGasLimit
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
+        i_keyHash = keyHash;
+        i_subscriptionId = subscriptionId;
+        i_callbackGasLimit = callbackGasLimit;
         s_lastTimestamp = block.timestamp;
-        s_subscriptionId = subscriptionId;
     }
 
     function getEntranceFee() external view returns (uint256) {
@@ -91,23 +104,21 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__InsufficientInterval();
         }
 
-        // requestId = s_vrfCoordinator.requestRandomWords(
-        //     VRFV2PlusClient.RandomWordsRequest({
-        //         keyHash: keyHash,
-        //         subId: s_subscriptionId,
-        //         requestConfirmations: requestConfirmations,
-        //         callbackGasLimit: callbackGasLimit,
-        //         numWords: numWords,
-        //         extraArgs: VRFV2PlusClient._argsToBytes(
-        //             VRFV2PlusClient.ExtraArgsV1({
-        //                 nativePayment: enableNativePayment
-        //             })
-        //         )
-        //     })
-        // );
+        // we request the random number with this call
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: i_keyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS, // 3 is the default value
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUMBER_OF_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            })
+        );
 
-        // TODO: request the number
-        // TODO: get the number
+        // TODO: use the requestId to send the callback and store the random number
     }
 
     // implementation of fullfillRandomWords function
