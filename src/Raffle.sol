@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 
 // 2. import statements
 
+// TODO: import Chainlink VRF contract
+
 // 4. errors
 
 error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
@@ -14,6 +16,8 @@ error Raffle__InsufficientInterval();
 // 6. libraries
 
 // 7. contracts
+
+// TODO: make Raffle contract inherits from VRF contract
 
 /// @title a sample Raffle contract
 /// @author nowdev
@@ -71,8 +75,7 @@ contract Raffle {
             revert Raffle__InsufficientInterval();
         }
 
-        // pick a random number
-        // get the address index corresponding to this number
-        // pay the address with all the funded ETH
+        // TODO: request the number
+        // TODO get the number
     }
 }
