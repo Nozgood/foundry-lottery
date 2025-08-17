@@ -10,7 +10,11 @@ error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
 error Raffle__InsufficientInterval();
 error Raffle__TransferFailed();
 error Raffle__RaffleNotOpen();
-error Raffle__UpkeepNotNeeded();
+error Raffle__UpkeepNotNeeded(
+    uint256 balance,
+    uint256 playersLength,
+    uint256 raffleState
+);
 
 // TODO: make Raffle contract inherits from VRF contract
 
@@ -123,7 +127,11 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     function performUpkeep(bytes calldata /*performData*/) external override {
         (bool upkeepNeeded, ) = _checkUpkeep();
         if (!upkeepNeeded) {
-            revert Raffle__UpkeepNotNeeded();
+            revert Raffle__UpkeepNotNeeded(
+                address(this).balance,
+                s_players.length,
+                uint256(s_raffleState)
+            );
         }
 
         s_raffleState = RaffleState.CALCULATING;
