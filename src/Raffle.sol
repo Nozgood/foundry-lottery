@@ -2,23 +2,15 @@
 
 pragma solidity 0.8.19;
 
-// 2. import statements
-
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-
-// 4. errors
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
 error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
 error Raffle__InsufficientInterval();
 error Raffle__TransferFailed();
 error Raffle__RaffleNotOpen();
-
-// 5. interfaces
-
-// 6. libraries
-
-// 7. contracts
+error Raffle__UpkeepNotNeeded();
 
 // TODO: make Raffle contract inherits from VRF contract
 
@@ -26,7 +18,7 @@ error Raffle__RaffleNotOpen();
 /// @author nowdev
 /// @notice This contract has a learning purpose, it does not aims to be used in production
 /// @dev
-contract Raffle is VRFConsumerBaseV2Plus {
+contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     enum RaffleState {
         OPEN,
         CALCULATING
@@ -51,19 +43,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
-
-    /*
-        order of functions:
-            - constructor
-            - receive function (if exists)
-            - fallback function (if exists)
-            - external
-            - public
-            - internal
-            - private
-        */
-
-    // at the init of the contract, we set the entrance fee value to the received param;
 
     // NOTE: i have to use the constructor of the contract i inherits from
 
@@ -92,7 +71,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return i_entranceFee;
     }
 
-    // enterRaffle => a user participate to the raffle, pay the fee etc ...
     function enterRaffle() external payable {
         if (msg.value < i_entranceFee) {
             revert Raffle__InsufficientEntranceFee(msg.value, i_entranceFee);
@@ -106,10 +84,46 @@ contract Raffle is VRFConsumerBaseV2Plus {
         emit RaffleEntered(msg.sender);
     }
 
-    // pickWinner => we select the winner of the raffle
-    function pickWinner() external {
-        if ((block.timestamp - s_lastTimestamp) > i_interval) {
-            revert Raffle__InsufficientInterval();
+    function _checkUpkeep()
+        internal
+        view
+        returns (bool upkeepNeeded, bytes memory /*performData*/)
+    {
+        bool timeHasPassed = (block.timestamp - s_lastTimestamp) > i_interval;
+        bool isRaffleOpen = s_raffleState == RaffleState.OPEN;
+        bool hasBalance = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+
+        upkeepNeeded =
+            timeHasPassed &&
+            isRaffleOpen &&
+            hasBalance &&
+            hasPlayers;
+
+        return (upkeepNeeded, "");
+    }
+
+    /// @dev this is the function the Chainlink nodes will call to check if it's time to PickWinner
+    /// the following conditions need to be statisfied to pick the winner:
+    ///     1. the time interval has passed between raffle runs
+    ///     2. the lottery status is on OPEN state
+    ///     3. the contract has ETH
+    ///     4. the subscription has LINK (needed to pick a random number)
+    function checkUpkeep(
+        bytes calldata /*checkData*/
+    )
+        public
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory /*performData*/)
+    {
+        return _checkUpkeep();
+    }
+
+    function performUpkeep(bytes calldata /*performData*/) external override {
+        (bool upkeepNeeded, ) = _checkUpkeep();
+        if (!upkeepNeeded) {
+            revert Raffle__UpkeepNotNeeded();
         }
 
         s_raffleState = RaffleState.CALCULATING;
