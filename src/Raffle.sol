@@ -12,6 +12,7 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
 error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
 error Raffle__InsufficientInterval();
 error Raffle__TransferFailed();
+error Raffle__RaffleNotOpen();
 
 // 5. interfaces
 
@@ -26,32 +27,30 @@ error Raffle__TransferFailed();
 /// @notice This contract has a learning purpose, it does not aims to be used in production
 /// @dev
 contract Raffle is VRFConsumerBaseV2Plus {
+    enum RaffleState {
+        OPEN,
+        CALCULATING
+    }
+
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint16 private constant NUMBER_OF_WORDS = 1;
 
     // i_ for immutable
     uint256 private immutable i_entranceFee;
-
-    // @dev the duration of lottery in seconds
     uint256 private immutable i_interval;
-    // from chainlink doc for ETH sepolia (2 gwei key hash): 0x9e9e46732b32662b9adc6f3abdf6c5e926a666d174a4d6b8e39c4cca76a38897
-    bytes32 private immutable i_keyHash;
-
-    // subId of my own subscription (metamask): 34454315038717409854187127711103819628859866229620648994410326661620188613650
-    uint256 private immutable i_subscriptionId;
-
+    bytes32 private immutable i_keyHash; // from chainlink doc for ETH sepolia (2 gwei key hash): 0x9e9e46732b32662b9adc6f3abdf6c5e926a666d174a4d6b8e39c4cca76a38897
+    uint256 private immutable i_subscriptionId; // subId of my own(metamask): 34454315038717409854187127711103819628859866229620648994410326661620188613650
     uint32 private immutable i_callbackGasLimit;
 
     // s_ for state variable
-    // payable to allow addresses to receive ether
-    address payable[] private s_players;
+    address payable[] private s_players; // payable to allow addresses to receive ether
     uint256 private s_lastTimestamp;
-
     uint256 private s_subscriptionId;
-
     address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     event RaffleEntered(address indexed player);
+    event WinnerPicked(address indexed winner);
 
     /*
         order of functions:
@@ -85,6 +84,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
         s_lastTimestamp = block.timestamp;
+
+        s_raffleState = RaffleState.OPEN;
     }
 
     function getEntranceFee() external view returns (uint256) {
@@ -97,6 +98,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__InsufficientEntranceFee(msg.value, i_entranceFee);
         }
 
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle__RaffleNotOpen();
+        }
+
         s_players.push(payable(msg.sender));
         emit RaffleEntered(msg.sender);
     }
@@ -106,6 +111,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
         if ((block.timestamp - s_lastTimestamp) > i_interval) {
             revert Raffle__InsufficientInterval();
         }
+
+        s_raffleState = RaffleState.CALCULATING;
 
         // we request the random number with this call
         uint256 requestId = s_vrfCoordinator.requestRandomWords(
@@ -130,12 +137,18 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256[] calldata randomWords
     ) internal override {
         uint256 winnerIndex = randomWords[0] % s_players.length;
-        address payable recentWinner = s_players[winnerIndex];
-        s_recentWinner = recentWinner;
+        address payable winner = s_players[winnerIndex];
+        s_recentWinner = winner;
 
-        (bool success, ) = recentWinner.call{value: address(this).balance}("");
+        s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
+        s_lastTimestamp = block.timestamp;
+
+        (bool success, ) = winner.call{value: address(this).balance}("");
         if (!success) {
             revert Raffle__TransferFailed();
         }
+
+        emit WinnerPicked(s_recentWinner);
     }
 }
