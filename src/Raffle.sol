@@ -6,16 +6,6 @@ import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFCo
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
-error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
-error Raffle__InsufficientInterval();
-error Raffle__TransferFailed();
-error Raffle__RaffleNotOpen();
-error Raffle__UpkeepNotNeeded(
-    uint256 balance,
-    uint256 playersLength,
-    uint256 raffleState
-);
-
 // TODO: make Raffle contract inherits from VRF contract
 
 /// @title a sample Raffle contract
@@ -27,6 +17,16 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         OPEN,
         CALCULATING
     }
+
+    error Raffle__InsufficientEntranceFee(uint256 send, uint256 required);
+    error Raffle__InsufficientInterval();
+    error Raffle__TransferFailed();
+    error Raffle__RaffleNotOpen();
+    error Raffle__UpkeepNotNeeded(
+        uint256 balance,
+        uint256 playersLength,
+        uint256 raffleState
+    );
 
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint16 private constant NUMBER_OF_WORDS = 1;
@@ -73,6 +73,18 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
 
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
+    }
+
+    function getRaffleState() external view returns (RaffleState) {
+        return s_raffleState;
+    }
+
+    function getPlayer(uint256 index) external view returns (address) {
+        if (index > s_players.length) {
+            revert();
+        }
+
+        return s_players[index];
     }
 
     function enterRaffle() external payable {
