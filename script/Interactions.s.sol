@@ -30,7 +30,9 @@ contract CreateSubscription is Script {
         return (subId, vrfCoordinator);
     }
 
-    function run() public {}
+    function run() public {
+        createSubscriptionUsingConfig();
+    }
 }
 
 contract FundSubscription is Script, CodeConstants {
@@ -98,7 +100,18 @@ contract AddConsumer is Script {
         address contractToAddToVrf,
         address vrfCoordinator,
         uint256 subscriptionId
-    ) public {}
+    ) public {
+        console2.log("adding consumer to contract", contractToAddToVrf);
+        console2.log("to vrf coordinator ", vrfCoordinator);
+        console2.log("on chainid ", block.chainid);
+
+        vm.startBroadcast();
+        VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(
+            subscriptionId,
+            contractToAddToVrf
+        );
+        vm.stopBroadcast();
+    }
 
     function run() external {
         address mostRecentRaffleAddress = DevOpsTools
