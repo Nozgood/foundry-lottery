@@ -87,6 +87,10 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         return s_players[index];
     }
 
+    function getInterval() external view returns (uint256) {
+        return i_interval;
+    }
+
     function enterRaffle() external payable {
         if (msg.value < i_entranceFee) {
             revert Raffle__InsufficientEntranceFee(msg.value, i_entranceFee);
