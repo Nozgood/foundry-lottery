@@ -31,5 +31,14 @@ contract CreateSubscription is Script {
 }
 
 contract FundSubscription is Script {
+    uint256 public constant FUND_AMOUNT = 3 ether; // = 3 LINK
+
+    function fundSubscriptionUsingConfig() public {
+        HelperConfig helperConfig = new HelperConfig();
+        address vrfCoordinator = helperConfig.getNetworkConfig().vrfCoordinator;
+        uint256 subscriptionId = helperConfig.getNetworkConfig().subscriptionId;
+        address linkToken = helperConfig.getNetworkConfig().link;
+    }
+
     function run() public {}
 }
