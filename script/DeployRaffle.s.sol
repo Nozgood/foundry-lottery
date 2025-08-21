@@ -10,23 +10,16 @@ import {CreateSubscription, FundSubscription, AddConsumer} from "./Interactions.
 contract DeployRaffle is Script {
     function deployRaffle() public returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig
-            .getNetworkConfig();
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getNetworkConfig();
 
         if (networkConfig.subscriptionId == 0) {
             CreateSubscription createSubscriptionScript = new CreateSubscription();
-            (
-                networkConfig.subscriptionId,
-                networkConfig.vrfCoordinator
-            ) = createSubscriptionScript.createSubscription(
-                networkConfig.vrfCoordinator
-            );
+            (networkConfig.subscriptionId, networkConfig.vrfCoordinator) =
+                createSubscriptionScript.createSubscription(networkConfig.vrfCoordinator);
 
             FundSubscription fundSubscriptionScript = new FundSubscription();
             fundSubscriptionScript.fundSubscription(
-                networkConfig.vrfCoordinator,
-                networkConfig.subscriptionId,
-                networkConfig.link
+                networkConfig.vrfCoordinator, networkConfig.subscriptionId, networkConfig.link
             );
         }
 
@@ -42,11 +35,7 @@ contract DeployRaffle is Script {
         vm.stopBroadcast();
 
         AddConsumer addConsumerScript = new AddConsumer();
-        addConsumerScript.addConsumer(
-            address(newRaffle),
-            networkConfig.vrfCoordinator,
-            networkConfig.subscriptionId
-        );
+        addConsumerScript.addConsumer(address(newRaffle), networkConfig.vrfCoordinator, networkConfig.subscriptionId);
 
         return (newRaffle, helperConfig);
     }

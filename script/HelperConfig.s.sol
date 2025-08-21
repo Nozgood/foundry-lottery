@@ -16,8 +16,6 @@ abstract contract CodeConstants {
 }
 
 contract HelperConfig is CodeConstants, Script {
-    error HelperConfig__InvalidChainId(uint256 chainId);
-
     /// @dev NetworkConfig contains the params we need to init a new Raffle contract
     struct NetworkConfig {
         uint256 entranceFee;
@@ -31,6 +29,8 @@ contract HelperConfig is CodeConstants, Script {
 
     NetworkConfig public localNetworkConfig;
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
+
+    error HelperConfig__InvalidChainId(uint256 chainId);
 
     /// @dev in the constructor, we check the chainId to dynamically create a config
     /// in function of the blockchain we use
@@ -59,11 +59,8 @@ contract HelperConfig is CodeConstants, Script {
         }
 
         vm.startBroadcast();
-        VRFCoordinatorV2_5Mock mockVrfCoordinator = new VRFCoordinatorV2_5Mock(
-            MOCK_BASE_FEE,
-            MOCK_GAS_PRICE_LINK,
-            MOCK_WEI_PER_UINT_LINK
-        );
+        VRFCoordinatorV2_5Mock mockVrfCoordinator =
+            new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UINT_LINK);
         LinkToken mockLinkToken = new LinkToken();
         vm.stopBroadcast();
 
@@ -80,9 +77,7 @@ contract HelperConfig is CodeConstants, Script {
         return localNetworkConfig;
     }
 
-    function getNetworkConfigByChainId(
-        uint256 chainId
-    ) public returns (NetworkConfig memory) {
+    function getNetworkConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
         if (chainId == LOCAL_CHAIN_ID) {
             return getAnvilConfig();
         }

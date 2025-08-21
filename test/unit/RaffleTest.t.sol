@@ -38,13 +38,7 @@ contract RaffleTest is Test {
     function testEnterRaffleNotEnoughValue() public {
         vm.prank(PLAYER);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Raffle.Raffle__InsufficientEntranceFee.selector,
-                0 ether,
-                0.01 ether
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Raffle.Raffle__InsufficientEntranceFee.selector, 0 ether, 0.01 ether));
         raffle.enterRaffle();
     }
 
