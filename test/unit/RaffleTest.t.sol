@@ -83,7 +83,7 @@ contract RaffleTest is Test {
         raffle.enterRaffle{value: entranceFee}();
     }
 
-    function testCheckUpkeepReturnsFalseWithoutTimePassed() public {
+    function testCheckUpkeepReturnsFalseWithoutTimePassed() public view {
         // vm.warp(block.timestamp + 29);
         // console2.log("block timestamp: ", block.timestamp);
 
@@ -102,5 +102,20 @@ contract RaffleTest is Test {
 
         // Assert
         assert(upkeepNeeded);
+    }
+
+    function testPerformUpkeepNotNeeded() public {
+        uint256 balance = 0;
+        uint256 numberOfPlayers = 0;
+        Raffle.RaffleState rState = raffle.getRaffleState();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Raffle.Raffle__UpkeepNotNeeded.selector,
+                balance,
+                numberOfPlayers,
+                rState
+            )
+        );
+        raffle.performUpkeep("");
     }
 }
