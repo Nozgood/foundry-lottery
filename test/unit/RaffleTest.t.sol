@@ -152,4 +152,42 @@ contract RaffleTest is Test {
             address(raffle)
         );
     }
+
+    function testFulfillRandomWordsNormalBehavior() public raffleEntered {
+        uint256 additionalEntrants = 3;
+        uint256 startingIndex = 1;
+
+        for (uint256 i = startingIndex; i < 4; i++) {
+            address newPlayer = address(uint160(i));
+
+            hoax(newPlayer, 1 ether);
+            raffle.enterRaffle{value: entranceFee}();
+        }
+
+        uint256 startingTimeStamp = raffle.getLastTimestamp();
+        uint256 startingBalance = address(uint160(1)).balance;
+
+        vm.recordLogs();
+        raffle.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 requestId = entries[1].topics[1];
+
+        console2.log("vrf coordinator balance ", vrfCoordinator.balance);
+
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            uint256(requestId),
+            address(raffle)
+        );
+
+        address recentWinner = raffle.getRecentWinner();
+        uint256 winnerBalance = recentWinner.balance;
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+        uint256 endingTimestamp = raffle.getLastTimestamp();
+
+        uint256 prize = entranceFee * (additionalEntrants + 1);
+
+        assertEq(winnerBalance, startingBalance + prize);
+        assertEq(uint256(raffleState), 0);
+        assert(endingTimestamp > startingTimeStamp);
+    }
 }

@@ -89,6 +89,14 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         return i_interval;
     }
 
+    function getLastTimestamp() external view returns (uint256) {
+        return s_lastTimestamp;
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
+    }
+
     function enterRaffle() external payable {
         if (msg.value < i_entranceFee) {
             revert Raffle__InsufficientEntranceFee(msg.value, i_entranceFee);
@@ -187,7 +195,14 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
 
         emit WinnerPicked(s_recentWinner);
 
+        console2.log("contract address ", address(this));
+        console2.log("contract balance ", address(this).balance);
+        console2.log("winner address", winner);
+
         (bool success, ) = winner.call{value: address(this).balance}("");
+
+        console2.log("winner balance", winner.balance);
+
         if (!success) {
             revert Raffle__TransferFailed();
         }
