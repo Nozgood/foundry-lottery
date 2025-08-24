@@ -48,6 +48,7 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
 
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     // NOTE: i have to use the constructor of the contract i inherits from
 
@@ -164,6 +165,9 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
                 )
             })
         );
+
+        // NOTE: this event is redundant, the VrfCoordinnator already emit one, but we keep it to facilitate tests
+        emit RequestedRaffleWinner(requestId);
     }
 
     // implementation of fullfillRandomWords function
