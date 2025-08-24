@@ -8,6 +8,7 @@ import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Raffle} from "src/Raffle.sol";
 import {console2} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
     Raffle public raffle;
@@ -20,6 +21,7 @@ contract RaffleTest is Test {
     uint256 public constant STARTING_PLAYER_BALANCE = 10 ether;
 
     uint256 private entranceFee;
+    address private vrfCoordinator;
 
     modifier raffleEntered() {
         vm.prank(PLAYER);
@@ -35,6 +37,9 @@ contract RaffleTest is Test {
         vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
 
         entranceFee = raffle.getEntranceFee();
+        vrfCoordinator = helperConfig
+            .getNetworkConfigByChainId(block.chainid)
+            .vrfCoordinator;
     }
 
     function testRaffleStateStartsOpen() public view {
@@ -136,5 +141,15 @@ contract RaffleTest is Test {
         Raffle.RaffleState raffleState = raffle.getRaffleState();
         assert(uint256(requestId) > 0);
         assert(uint256(raffleState) == 1);
+    }
+
+    function testFulfillRandomWordsCalledOnlyAfterPerformUpkeep(
+        uint256 randomRequestId
+    ) public raffleEntered {
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            randomRequestId,
+            address(raffle)
+        );
     }
 }
