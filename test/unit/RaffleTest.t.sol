@@ -4,13 +4,13 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
-import {HelperConfig} from "script/HelperConfig.s.sol";
+import {HelperConfig, CodeConstants} from "script/HelperConfig.s.sol";
 import {Raffle} from "src/Raffle.sol";
 import {console2} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-contract RaffleTest is Test {
+contract RaffleTest is Test, CodeConstants {
     Raffle public raffle;
     HelperConfig public helperConfig;
 
@@ -28,6 +28,14 @@ contract RaffleTest is Test {
         raffle.enterRaffle{value: entranceFee}();
         vm.warp(block.timestamp + raffle.getInterval() + 1);
         vm.roll(block.number + 1);
+        _;
+    }
+
+    // WARN: this is not recommended for a real dev environment, but for now, it is OK
+    modifier skipFork() {
+        if (block.chainid != LOCAL_CHAIN_ID) {
+            return;
+        }
         _;
     }
 
@@ -113,7 +121,7 @@ contract RaffleTest is Test {
     }
 
     function testPerformUpkeepNotNeeded() public {
-        uint256 balance = 0;
+        uint256 balance = address(raffle).balance;
         uint256 numberOfPlayers = 0;
         Raffle.RaffleState rState = raffle.getRaffleState();
         vm.expectRevert(
@@ -145,7 +153,7 @@ contract RaffleTest is Test {
 
     function testFulfillRandomWordsCalledOnlyAfterPerformUpkeep(
         uint256 randomRequestId
-    ) public raffleEntered {
+    ) public raffleEntered skipFork {
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
             randomRequestId,
@@ -153,7 +161,11 @@ contract RaffleTest is Test {
         );
     }
 
-    function testFulfillRandomWordsNormalBehavior() public raffleEntered {
+    function testFulfillRandomWordsNormalBehavior()
+        public
+        raffleEntered
+        skipFork
+    {
         uint256 additionalEntrants = 3;
         uint256 startingIndex = 1;
 
@@ -171,8 +183,6 @@ contract RaffleTest is Test {
         raffle.performUpkeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1];
-
-        console2.log("vrf coordinator balance ", vrfCoordinator.balance);
 
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
             uint256(requestId),

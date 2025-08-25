@@ -25,6 +25,7 @@ contract HelperConfig is CodeConstants, Script {
         bytes32 keyHash;
         uint32 callbackGasLimit;
         address link;
+        address account;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -41,13 +42,14 @@ contract HelperConfig is CodeConstants, Script {
 
     function getSepoliaETHConfig() public pure returns (NetworkConfig memory) {
         NetworkConfig memory ethConfig = NetworkConfig({
-            entranceFee: 5e18,
+            entranceFee: 0.01 ether,
             interval: 30,
             subscriptionId: 34454315038717409854187127711103819628859866229620648994410326661620188613650, // 34454315038717409854187127711103819628859866229620648994410326661620188613650,
             vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
             keyHash: 0x9e9e46732b32662b9adc6f3abdf6c5e926a666d174a4d6b8e39c4cca76a38897,
             callbackGasLimit: 500000,
-            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            account: 0xa28d5b8B1c382403Ab7255C9E5CaEAF026059482 // metamask test account
         });
 
         return ethConfig;
@@ -59,8 +61,11 @@ contract HelperConfig is CodeConstants, Script {
         }
 
         vm.startBroadcast();
-        VRFCoordinatorV2_5Mock mockVrfCoordinator =
-            new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UINT_LINK);
+        VRFCoordinatorV2_5Mock mockVrfCoordinator = new VRFCoordinatorV2_5Mock(
+            MOCK_BASE_FEE,
+            MOCK_GAS_PRICE_LINK,
+            MOCK_WEI_PER_UINT_LINK
+        );
         LinkToken mockLinkToken = new LinkToken();
         vm.stopBroadcast();
 
@@ -71,13 +76,16 @@ contract HelperConfig is CodeConstants, Script {
             vrfCoordinator: address(mockVrfCoordinator),
             keyHash: 0x9e9e46732b32662b9adc6f3abdf6c5e926a666d174a4d6b8e39c4cca76a38897,
             callbackGasLimit: 500000,
-            link: address(mockLinkToken)
+            link: address(mockLinkToken),
+            account: 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38
         });
 
         return localNetworkConfig;
     }
 
-    function getNetworkConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
+    function getNetworkConfigByChainId(
+        uint256 chainId
+    ) public returns (NetworkConfig memory) {
         if (chainId == LOCAL_CHAIN_ID) {
             return getAnvilConfig();
         }
